@@ -1,0 +1,138 @@
+<!-- ... existing code ... -->
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
+        
+        .leaf-btn {
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+            border: 3px solid #1b5e20;
+            border-radius: 50% 50% 50% 10%;
+            color: white;
+            padding: 25px 20px; /* DIUBAH: Padding diperbesar agar bidang daun lebih luas */
+            font-size: 1.15rem; /* DIUBAH: Ukuran font disesuaikan menjadi lebih besar */
+            min-height: 90px; /* DIUBAH: Menambahkan batas minimal tinggi daun */
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.4);
+            position: relative;
+            overflow: hidden;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .leaf-btn:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 2px 5px rgba(255,255,255,0.4);
+            filter: brightness(1.2);
+        }
+        .leaf-btn:disabled { cursor: not-allowed; opacity: 0.8; }
+        .leaf-correct { animation: glowGreen 1s; background: linear-gradient(135deg, #64dd17 0%, #33691e 100%);}
+        .leaf-wrong { animation: sinkDown 1.5s forwards; }
+
+        @keyframes glowGreen { 0% { box-shadow: 0 0 5px #64dd17; } 50% { box-shadow: 0 0 20px #64dd17; } 100% { box-shadow: 0 0 5px #64dd17; } }
+        @keyframes sinkDown { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(100px) scale(0.5); opacity: 0; } }
+
+        .frog {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            transition: transform 0.5s cubic-bezier(0.25, 1.5, 0.5, 1);
+            filter: drop-shadow(0 10px 5px rgba(0,0,0,0.4));
+            z-index: 50; /* DIUBAH: Menambahkan Z-index tinggi agar katak selalu tertampil di depan (di atas) daun */
+        }
+        .frog-sink { animation: sinkFrog 2s forwards; }
+<!-- ... existing code ... -->
+```
+
+```html:Froggy Indus Adventure:index.html
+<!-- ... existing code ... -->
+        const VFX = {
+            canvas: document.getElementById('bg-canvas'),
+            ctx: null,
+            particles: [],
+            ripples: [],
+            bubbles: [],
+            raindrops: [], // DIUBAH: Tambahan array penampung partikel hujan
+            width: 0,
+            height: 0,
+            lastTime: 0,
+
+            init() {
+<!-- ... existing code ... -->
+```
+
+```html:Froggy Indus Adventure:index.html
+<!-- ... existing code ... -->
+            loop(time) {
+                const dt = time - this.lastTime;
+                this.lastTime = time;
+
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                // Update & Draw Raindrops (Efek Hujan Jatuh)
+                if (Math.random() < 0.4) { // Spawn rate intensitas hujan
+                    this.raindrops.push({
+                        x: Math.random() * this.width,
+                        y: -20, // Mulai dari luar kanvas atas
+                        vy: 12 + Math.random() * 8, // Kecepatan jatuh
+                        length: 15 + Math.random() * 20,
+                        alpha: 0.15 + Math.random() * 0.2
+                    });
+                }
+
+                this.ctx.lineWidth = 1.5;
+                for (let i = this.raindrops.length - 1; i >= 0; i--) {
+                    const drop = this.raindrops[i];
+                    this.ctx.beginPath();
+                    this.ctx.strokeStyle = `rgba(200, 230, 255, ${drop.alpha})`;
+                    this.ctx.moveTo(drop.x, drop.y);
+                    this.ctx.lineTo(drop.x - drop.vy * 0.1, drop.y + drop.length); // Hujan agak miring terhembus angin
+                    this.ctx.stroke();
+
+                    drop.y += drop.vy;
+                    drop.x -= drop.vy * 0.1; // Pergerakan sumbu X
+
+                    // Jika menyentuh batas bawah atau secara acak membentur "air"
+                    if (drop.y > this.height || (Math.random() < 0.005 && drop.y > this.height * 0.4)) {
+                        // Sesekali buat riak air (ripple) kecil saat hujan jatuh ke air
+                        if (Math.random() < 0.15) {
+                            this.ripples.push({ x: drop.x, y: drop.y + drop.length, radius: 1, maxRadius: 15, alpha: 0.3, speed: 0.5 });
+                        }
+                        this.raindrops.splice(i, 1);
+                    }
+                }
+
+                // Draw Ripples
+                for (let i = this.ripples.length - 1; i >= 0; i--) {
+<!-- ... existing code ... -->
+```
+
+```html:Froggy Indus Adventure:index.html
+<!-- ... existing code ... -->
+            positionFrog(targetElement) {
+                if (!targetElement) return;
+                const rect = targetElement.getBoundingClientRect();
+                const containerRect = this.container.getBoundingClientRect();
+                
+                const frogWidth = 60;
+                const frogHeight = 60;
+
+                // Hitung titik tengah X pada daun
+                let x = (rect.left - containerRect.left) + (rect.width / 2) - (frogWidth / 2);
+                
+                // DIUBAH: Hitung offset Y agar katak terlihat duduk tepat di permukaan daun yang membesar.
+                // Mengurangi sekitar 70% dari tinggi katak dari titik tengah Y daun agar bagian bawah katak menyentuh pertengahan daun.
+                let y = (rect.top - containerRect.top) + (rect.height / 2) - (frogHeight * 0.7);
+
+                this.dom.frog.style.transform = `translate(${x}px, ${y}px)`;
+            }
+
+            checkAnswer(isCorrect, leafElement) {
+<!-- ... existing code ... -->
+```
+
+### Penjelasan Pembaruan:
+1.  **Daun Lebih Besar:** Pada kode CSS kelas `.leaf-btn`, saya memperbesar `padding` (menjadi `25px 20px`), menambahkan `min-height: 90px`, dan sedikit menaikkan ukuran font.
+2.  **Katak Selalu di Atas:** Menambahkan nilai `z-index: 50` pada `.frog` agar saat katak melompat maupun bertengger, ia tidak tertutup oleh sisi elemen daun (yang memiliki z-index lebih rendah).
+3.  **Efek Hujan:** Modul `VFX` kini memiliki *array* `raindrops`. Setiap frame berjalan (`VFX.loop`), rintik hujan baru akan di-*spawn* meluncur dari atas ke bawah. Saat rintik mengenai batas bawah, terdapat kemungkinan (15%) memicu *ripple* (riak) air membulat berukuran kecil, memberi ilusi bahwa hujan tersebut memang bertabrakan dengan sungai.
+4.  **Posisi Bertengger Akurat:** Fungsi `positionFrog(targetElement)` di-edit rumusnya. Dahulu kalkulasinya statis, sekarang ia dinamik menghitung titik tengah (Y) daun dikurangi 70% tinggi katak, agar telapak kaki (bawah siluet katak) menginjak rapi di atas daun yang kini ukurannya lebih lebar.
